@@ -49,7 +49,9 @@ export class ViewCountUseCase {
         },
         {} as Record<string, VideoInfoItem>,
       );
-    await this.insertVideo(notDocumented);
+    if (Object.keys(notDocumented).length > 0) {
+      await this.insertVideo(notDocumented);
+    }
   }
 
   private async fetchFromYouTube(
