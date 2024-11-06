@@ -9,7 +9,7 @@ import {firestoreRegion} from "../../constant/setting-value";
  * if the view count is about to reach the milestone,
  * then also add the notification in "news" collection.
  *
- * FREQ: per 10 minutes(144/d)
+ * FREQ: every 10 minutes(144/d)
  *
  * R: n
  * W: n + a

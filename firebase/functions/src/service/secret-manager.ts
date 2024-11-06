@@ -1,10 +1,9 @@
 import {SecretManagerServiceClient} from "@google-cloud/secret-manager";
-import {json} from "../type/types";
 
 export class SecretManager {
-  private json: json;
+  private json: {[key: string]: string | string[]};
 
-  private constructor(json: json) {
+  private constructor(json: {[key: string]: string | string[]}) {
     this.json = json;
   }
 

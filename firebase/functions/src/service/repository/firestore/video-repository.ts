@@ -1,9 +1,7 @@
 import {
   CollectionReference,
-  DocumentReference,
   FieldValue,
   Firestore,
-  Timestamp,
   Transaction,
   WriteBatch,
   WriteResult,
@@ -17,7 +15,6 @@ import {logger} from "firebase-functions/v1";
 
 const COLLECTION_NAME = "video";
 const SUB_COLLECTION_NAME = "view-history";
-const BATCH_SIZE = 500;
 
 export class VideoRepository extends FirestoreRepository<VideoDocument> {
   constructor(firestore: Firestore) {
@@ -138,7 +135,6 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
     if (snapshot.empty) {
       logger.info(`No more documents to process in batch ${batchCount}.`);
       logger.info(`Fetched ${snapshot.size} documents in batch ${batchCount}.`);
-      throw Error("complete");
     }
 
     const batch = this.firestore.batch();
@@ -177,61 +173,6 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
     };
   }
 
-  public async getViewHistoriesBetween(
-    videoDocId: string,
-    from: Date,
-    to: Date,
-  ): Promise<{
-    docIdAndData: Record<string, ViewHistory>;
-    docRefs: DocumentReference[];
-  }> {
-    const viewHistoryDocs = await this.viewHistoryRef(videoDocId)
-      .where("created", ">=", Timestamp.fromDate(from))
-      .where("created", "<", Timestamp.fromDate(to))
-      .orderBy("created", "asc")
-      .get();
-    const filteredDocs = viewHistoryDocs.docs.filter((doc) =>
-      this.canAlternateWithUpdated(doc),
-    );
-    const docIdAndData: Record<string, ViewHistory> = filteredDocs.reduce(
-      (acc, doc) => {
-        acc[doc.id] = doc.data();
-        return acc;
-      },
-      {} as Record<string, ViewHistory>,
-    );
-    return {
-      docIdAndData: docIdAndData,
-      docRefs: filteredDocs.map((doc) => doc.ref),
-    };
-  }
-
-  public async getOldestViewHistory(): Promise<ViewHistory | undefined> {
-    const viewHistoryCollection =
-      this.firestore.collectionGroup(SUB_COLLECTION_NAME);
-    const docs = await viewHistoryCollection
-      .orderBy("created", "asc")
-      .limit(1)
-      .get();
-
-    return docs.docs.map((doc) => new ViewHistory(doc.data()))[0];
-  }
-
-  public async deleteViewHistriesWithRefs(
-    viewHistoryDocRefs: DocumentReference[],
-  ) {
-    const promises: Promise<WriteResult[]>[] = [];
-    for (let i = 0; i < viewHistoryDocRefs.length; i += BATCH_SIZE) {
-      const batch = this.startBatch();
-      viewHistoryDocRefs.splice(i, i + BATCH_SIZE).forEach((ref) => {
-        batch.delete(ref);
-      });
-      promises.push(batch.commit());
-    }
-    logger.info(promises.length);
-    await Promise.all(promises);
-  }
-
   public async commitBatch(batch: WriteBatch): Promise<WriteResult[]> {
     return await super.commitBatch(batch);
   }
@@ -245,34 +186,5 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
   private viewHistoryRef(videoDocId: string): CollectionReference<ViewHistory> {
     const vhRef = this.videoRef().doc(videoDocId);
     return super.getSubCollection<ViewHistory>(vhRef, SUB_COLLECTION_NAME);
-  }
-
-  private canAlternateWithUpdated(
-    viewHistoryDoc: FirebaseFirestore.QueryDocumentSnapshot<ViewHistory>,
-  ): boolean {
-    if (
-      !viewHistoryDoc.data().created ||
-      this.isEmptyMap(viewHistoryDoc.data().created)
-    ) {
-      // when `created` field is missing or its value is `{}`.
-      if (viewHistoryDoc.data().updated) {
-        return false;
-      } else {
-        return true;
-      }
-    }
-
-    return viewHistoryDoc.data().created instanceof Timestamp;
-  }
-
-  private isEmptyMap(
-    created: Timestamp | FieldValue | object | undefined,
-  ): boolean {
-    if (typeof created === "object") {
-      if (Object.keys(created).length === 0) {
-        return true;
-      }
-    }
-    return false;
   }
 }
