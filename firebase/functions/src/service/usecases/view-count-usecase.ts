@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import * as logger from "firebase-functions/logger";
 import {NewsRepository} from "../repository/firestore/news-repository";
 import {VideoRepository} from "../repository/firestore/video-repository";
 import {FieldValue, Timestamp, Transaction} from "firebase-admin/firestore";
@@ -14,7 +15,6 @@ import {
   YouTubeDataApiRepository,
 } from "../repository/youtube/youtube-repository";
 import {VideoInfoItem} from "../../model/youtube/video-info-item";
-import {logger} from "firebase-functions/v1";
 
 export class ViewCountUseCase {
   private youtubeRepo: YouTubeDataApiRepository;
@@ -37,6 +37,9 @@ export class ViewCountUseCase {
       },
       {} as Record<string, number>,
     );
+    Object.entries(videoIdAndViewCounts).forEach(([videoId, viewCount]) => {
+      logger.info(`videoId: ${videoId}, viewCount: ${viewCount}`);
+    });
     const results =
       await this.updateVideoAndCreateNewsIfNeeded(videoIdAndViewCounts);
     const documented = new Set(Object.keys(results));
