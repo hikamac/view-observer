@@ -25,8 +25,10 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
   }
 
   public async getVideos(): Promise<Record<string, VideoDocument>> {
+    logger.debug("Fetching videos from Firestore");
     const snapshot = await super.getCollection<VideoDocument>().get();
     if (!super.exists(snapshot)) {
+      logger.warn("No videos found in Firestore");
       return {};
     }
     const documentIdAndData: Record<string, VideoDocument> =
@@ -37,24 +39,30 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
         },
         {} as Record<string, VideoDocument>,
       );
+    logger.debug("Fetched videos from Firestore", {documentIdAndData});
     return documentIdAndData;
   }
 
   public async addVideos(videoDocuments: VideoDocument[]) {
+    logger.debug("Adding videos to Firestore", {videoDocuments});
     const batch = super.startBatch();
     for (const vd of videoDocuments) {
       super.addWithBatch(batch, vd);
     }
-    return await super.commitBatch(batch);
+    const result = await super.commitBatch(batch);
+    logger.debug("Added videos to Firestore", {result});
+    return result;
   }
 
   public async getByVideoIdsInTx(
     tx: Transaction,
     videoIds: string[],
   ): Promise<Record<string, VideoDocument>> {
+    logger.debug("Fetching videos by IDs in transaction", {videoIds});
     const query = this.videoRef().where("videoId", "in", videoIds);
     const snapshot = await super.getInTx(tx, query);
     if (!super.exists(snapshot)) {
+      logger.warn("No videos found for given IDs in transaction");
       return {};
     }
     const documentIdAndData: Record<string, VideoDocument> =
@@ -65,6 +73,9 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
         },
         {} as Record<string, VideoDocument>,
       );
+    logger.debug("Fetched videos by IDs in transaction", {
+      documentIdAndData,
+    });
     return documentIdAndData;
   }
 
@@ -73,8 +84,13 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
     docId: string,
     videoDocument: VideoDocument,
   ) {
+    logger.debug("Updating video in transaction", {
+      docId,
+      videoDocument,
+    });
     const ref = this.videoRef().doc(docId);
     await super.updateInTx(tx, ref, videoDocument);
+    logger.debug("Updated video in transaction", {docId});
   }
 
   public async addViewHistoryInTx(
@@ -82,8 +98,17 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
     videoDocId: string,
     viewHistory: ViewHistory,
   ) {
+    logger.debug("Adding view history in transaction", {
+      videoDocId,
+      viewHistory,
+    });
     const ref = this.viewHistoryRef(videoDocId).doc();
-    return super.addInTx<ViewHistory>(tx, ref, viewHistory);
+    const result = await super.addInTx<ViewHistory>(tx, ref, viewHistory);
+    logger.debug("Added view history in transaction", {
+      videoDocId,
+      result,
+    });
+    return result;
   }
 
   /* batch */
@@ -136,8 +161,10 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
 
     const snapshot = await query.get();
     if (snapshot.empty) {
-      logger.info(`No more documents to process in batch ${batchCount}.`);
-      logger.info(`Fetched ${snapshot.size} documents in batch ${batchCount}.`);
+      logger.debug(`No more documents to process in batch ${batchCount}.`);
+      logger.debug(
+        `Fetched ${snapshot.size} documents in batch ${batchCount}.`,
+      );
       throw Error("complete");
     }
 
@@ -163,8 +190,8 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
     await batch.commit();
 
     const _totalFixed = totalFixed + snapshot.size;
-    logger.info("All documents have been updated.");
-    logger.info(
+    logger.debug("All documents have been updated.");
+    logger.debug(
       `${_batchCount} batches proceeded, ${_totalFixed} documents are fixed.`,
     );
 
@@ -212,9 +239,9 @@ export class VideoRepository extends FirestoreRepository<VideoDocument> {
     const docsRef = await viewHistoryCollection
       .orderBy("created", "asc")
       .limit(1);
-    logger.info("%o", docsRef);
+    logger.debug("%o", docsRef);
     const docs = await docsRef.get();
-    logger.info("%o", docs);
+    logger.debug("%o", docs);
 
     if (docs.empty) {
       return undefined;

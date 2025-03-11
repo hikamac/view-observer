@@ -29,30 +29,39 @@ export class ViewCountUseCase {
   }
 
   public async fetchAndStore(targetVideoIds: string[]) {
-    const videoIdAndInfoItems = await this.fetchFromYouTube(targetVideoIds);
-    const videoIdAndViewCounts = Object.keys(videoIdAndInfoItems).reduce(
-      (pre, id) => {
-        pre[id] = Number(videoIdAndInfoItems[id].statistics.viewCount);
-        return pre;
-      },
-      {} as Record<string, number>,
-    );
-    Object.entries(videoIdAndViewCounts).forEach(([videoId, viewCount]) => {
-      logger.info(`videoId: ${videoId}, viewCount: ${viewCount}`);
-    });
-    const results =
-      await this.updateVideoAndCreateNewsIfNeeded(videoIdAndViewCounts);
-    const documented = new Set(Object.keys(results));
-    const notDocumented = Object.keys(videoIdAndInfoItems)
-      .filter((id) => !documented.has(id))
-      .reduce(
+    try {
+      logger.debug("Fetching view counts for video IDs", {
+        targetVideoIds,
+      });
+      const videoIdAndInfoItems = await this.fetchFromYouTube(targetVideoIds);
+      logger.debug("Fetched view counts from YouTube", {
+        videoIdAndInfoItems,
+      });
+      const videoIdAndViewCounts = Object.keys(videoIdAndInfoItems).reduce(
         (pre, id) => {
-          pre[id] = videoIdAndInfoItems[id];
+          pre[id] = Number(videoIdAndInfoItems[id].statistics.viewCount);
           return pre;
         },
-        {} as Record<string, VideoInfoItem>,
+        {} as Record<string, number>,
       );
-    await this.insertVideo(notDocumented);
+      const results =
+        await this.updateVideoAndCreateNewsIfNeeded(videoIdAndViewCounts);
+      const documented = new Set(Object.keys(results));
+      const notDocumented = Object.keys(videoIdAndInfoItems)
+        .filter((id) => !documented.has(id))
+        .reduce(
+          (pre, id) => {
+            pre[id] = videoIdAndInfoItems[id];
+            return pre;
+          },
+          {} as Record<string, VideoInfoItem>,
+        );
+      await this.insertVideo(notDocumented);
+      logger.debug("Successfully stored view counts in Firestore");
+    } catch (error) {
+      logger.error("Error in fetchAndStore", error);
+      throw error;
+    }
   }
 
   private async fetchFromYouTube(

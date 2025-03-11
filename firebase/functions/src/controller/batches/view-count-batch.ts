@@ -1,4 +1,5 @@
 import * as functions from "firebase-functions";
+import * as logger from "firebase-functions/logger";
 import {defineString} from "firebase-functions/params";
 import {SecretManager} from "../../service/secret-manager";
 import {ViewCountUseCase} from "../../service/usecases/view-count-usecase";
@@ -27,8 +28,10 @@ export const fetchViewCountsAndStore = functions
       const viewCountUseCase = new ViewCountUseCase(youtubeDataApiKey);
       const secret = await SecretManager.setUpAsync(secretVarsName);
       const targetVideoIds = secret.get<string[]>("TARGET_VIDEO_IDS");
+      logger.debug("Fetched target video IDs", {targetVideoIds});
       await viewCountUseCase.fetchAndStore(targetVideoIds);
+      logger.debug("Successfully fetched and stored view counts");
     } catch (error) {
-      functions.logger.error(error);
+      logger.error("Error in fetchViewCountsAndStore", error);
     }
   });
