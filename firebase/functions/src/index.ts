@@ -9,8 +9,7 @@
 
 import * as admin from "firebase-admin";
 
-const options: admin.AppOptions = {};
-admin.initializeApp(options);
+admin.initializeApp();
 
 // //////////////////////////////////////
 // AUTO-GENERATED PART
