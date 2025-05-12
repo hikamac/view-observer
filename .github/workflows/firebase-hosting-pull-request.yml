@@ -13,7 +13,7 @@ jobs:
       FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
       FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      
+
     steps:
       - uses: actions/checkout@v3
       - uses: subosito/flutter-action@v2.12.0
@@ -39,6 +39,7 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ env.FIREBASE_SERVICE_ACCOUNT_OBSERVE_NOTIFY }}'
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          firebaseToolsVersion: '13.35.1'
 
       - name: Setup Firebase CLI
         run: npm install -g firebase-tools

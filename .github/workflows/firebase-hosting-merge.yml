@@ -39,6 +39,7 @@ jobs:
           firebaseServiceAccount: '${{ env.FIREBASE_SERVICE_ACCOUNT }}'
           channelId: live
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          firebaseToolsVersion: '13.35.1'
 
       - name: Setup Firebase CLI
         run: npm install -g firebase-tools
