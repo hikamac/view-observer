@@ -44,7 +44,7 @@ dependencies:
   flutter_riverpod: ^2.4.10
   json_annotation: ^4.8.1
   shared_preferences: ^2.2.2
-  youtube_player_iframe: ^4.0.4
+  youtube_player_iframe: ^5.1.2
   url_launcher: ^6.2.4
   flutter_link_previewer: ^3.2.2
   easy_localization: ^3.0.7
